@@ -1,9 +1,11 @@
 import sys
+from mimetypes import add_type
 from time import monotonic
 
-from PyQt6.QtWidgets import QApplication, QMainWindow
+from PyQt6.QtWidgets import QApplication, QMainWindow, QMessageBox
 from PyQt6.QtCore import QTimer, Qt
 from PyQt6.QtGui import QFont
+from PyQt6.QtSql import QSqlDatabase, QSqlRecord, QSqlQuery, QSqlTableModel
 
 from timer_ui import Ui_Form
 from scrambles import scramble_333, scramble_222
@@ -13,11 +15,52 @@ disciplines = {
     "2x2": scramble_222
 }
 
+# Подключение БД
+def create_connection():
+    db = QSqlDatabase.addDatabase("QSQLITE")
+
+    db.setDatabaseName("my_assemblies")
+
+    # Пытаемся открыть подключение
+    if not db.open():
+        # Если не получилось — сообщаем пользователю
+        QMessageBox.critical(
+            None,
+            "Ошибка!",
+            f"Не удалось подключиться к базе данных!\n"
+            f"Ошибка: {db.lastError().text()}\n"
+            f"Попробуйте перезагрузить компьютер."
+        )
+        return False
+    return True  # Ура, мы подключились!
+
+
+# Создание таблицы
+def create_tables():
+    query = QSqlQuery()
+
+    query.exec("""
+        CREATE TABLE IF NOT EXISTS times (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            time_ms INTEGER NOT NULL
+        )
+    """)
+
+
+
 
 class MyWidget(QMainWindow, Ui_Form):
     def __init__(self):
         super().__init__()
         self.setupUi(self)
+
+
+        self.model = QSqlTableModel(self)
+        self.model.setTable("times")
+        self.model.setEditStrategy(QSqlTableModel.EditStrategy.OnManualSubmit)
+        self.model.select()  # ← сначала загрузка
+        self.model.setHeaderData(0, Qt.Orientation.Horizontal, "ID")
+        self.model.setHeaderData(1, Qt.Orientation.Horizontal, "Время(мс)")
 
 
 
@@ -98,6 +141,9 @@ class MyWidget(QMainWindow, Ui_Form):
             self.last_tick = None
         self._render_time()
 
+        if self.elapsed_ms > 0:
+            self.add_time(self.elapsed_ms)
+
 
     def _update_time(self):
         now = monotonic()
@@ -117,11 +163,34 @@ class MyWidget(QMainWindow, Ui_Form):
 
 
 
+    # Добавление сборки в БД
+    def add_time(self, time_ms):
+        record = self.model.record()
+        record.setValue("time_ms", time_ms)
+        if not self.model.insertRecord(-1, record):
+            print("insertRecord:", self.model.lastError().text())
+            return False
+        if not self.model.submitAll():
+            print("submitAll:",
+                  self.model.lastError().text(),
+                  QSqlDatabase.database().lastError().text())
+            self.model.revertAll()
+            return False
+        print(f"Сборка {time_ms} мс добавлена, id={record.value('id')}")
+        return True
+
+
 
 
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
+    if not create_connection():
+        sys.exit(1)
+    create_tables()
+    print("Подключение установлено! 🎉")
+    print(f"Имя базы: {QSqlDatabase.database().databaseName()}")
+    print(f"Драйвер: {QSqlDatabase.database().driver()}")
     ex = MyWidget()
     ex.show()
     sys.exit(app.exec())
