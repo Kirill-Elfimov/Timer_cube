@@ -25,6 +25,7 @@ class MyWidget(QMainWindow, Ui_Form):
         self.elapsed_ms = 0
         self.running = False
         self.last_tick = None
+        self.flag = True # Остановлен таймер или нет
 
         self.timer = QTimer(self)
         self.timer.setInterval(10)  # обновление каждые 10 мс
@@ -45,6 +46,7 @@ class MyWidget(QMainWindow, Ui_Form):
         # Комбобокс с выбором дисциплины
         self.choice_of_discipline.addItems(disciplines.keys())
         self.generation()
+        self.choice_of_discipline.currentTextChanged.connect(self.generation)
 
 
         # Поле со скрамблом
@@ -53,29 +55,33 @@ class MyWidget(QMainWindow, Ui_Form):
     def generation(self):
         self.scramble_output.setText(disciplines[self.choice_of_discipline.currentText()]())
 
-
-
     def keyPressEvent(self, event):
-        key = event.key()
-
-        # Пробел — старт / стоп (isAutoRepeat защищает от «дребезга»)
-        if key == Qt.Key.Key_Space and not event.isAutoRepeat():
-            self._toggle_timer()
+        if event.key() == Qt.Key.Key_Space and not event.isAutoRepeat():
+            self.timer_output.setStyleSheet("color: green;")
+            if self.running:
+                self.pause()
+                self.flag = False
             event.accept()
             return
-
         super().keyPressEvent(event)
 
 
-    def _toggle_timer(self):
-        if self.running:
-            self.pause()
-        else:
-            self.start()
+    def keyReleaseEvent(self, event):
+        if event.key() == Qt.Key.Key_Space and not event.isAutoRepeat():
+            self.timer_output.setStyleSheet("")
+            if not self.running and self.flag:
+                self.start()
+            self.flag = True
+            event.accept()
+            return
+        super().keyReleaseEvent(event)
+
+
 
     def start(self):
         if self.running:
             return
+        self.elapsed_ms = 0
         self.running = True
         self.last_tick = monotonic()
         self.timer.start()
