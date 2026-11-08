@@ -32,7 +32,7 @@ def create_connection():
             f"Попробуйте перезагрузить компьютер."
         )
         return False
-    return True  # Ура, мы подключились!
+    return True
 
 
 # Создание таблицы
@@ -42,7 +42,9 @@ def create_tables():
     query.exec("""
         CREATE TABLE IF NOT EXISTS times (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            time_ms INTEGER NOT NULL
+            discipline TEXT NOT NULL DEFAULT '3x3',
+            time_ms INTEGER NOT NULL,
+            penalty INTEGER NOT NULL DEFAULT 0
         )
     """)
 
@@ -70,6 +72,7 @@ class MyWidget(QMainWindow, Ui_Form):
         self.last_tick = None
         self.flag = True # Остановлен таймер или нет
         self.last_time_id = None
+        self.last_penalty = 0
 
         self.timer = QTimer(self)
         self.timer.setInterval(10)  # обновление каждые 10 мс
@@ -93,6 +96,8 @@ class MyWidget(QMainWindow, Ui_Form):
         self.choice_of_discipline.currentTextChanged.connect(self.generation)
 
         self.delete_button.clicked.connect(self.delete_time)
+        self.p2_button.clicked.connect(self.toggle_p2)
+        self.dnf_button.clicked.connect(self.toggle_DNF)
 
 
         # Поле со скрамблом
@@ -169,7 +174,9 @@ class MyWidget(QMainWindow, Ui_Form):
     # Добавление сборки в БД
     def add_time(self, time_ms):
         record = self.model.record()
+        record.setValue("discipline", self.choice_of_discipline.currentText())
         record.setValue("time_ms", time_ms)
+        record.setValue("penalty", 0)
         if not self.model.insertRecord(-1, record):
             print("insertRecord:", self.model.lastError().text())
             return False
@@ -216,60 +223,62 @@ class MyWidget(QMainWindow, Ui_Form):
                     self.last_time_id = None
                     self.statusBar().showMessage("Сборка удалена", 3000)
                 else:
-                    QMessageBox.critical(
-                        self, "Ошибка",
-                        f"Не удалось удалить: {self.model.lastError().text()}"
-                    )
                     self.model.revertAll()
                 return
         self.last_time_id = None
+        self.last_time_ms = None
+        self.last_penalty = 0
 
-"""    def delete_time(self):
-        print(">>> delete_time вызван, last_time_id =", self.last_time_id,
-              "type =", type(self.last_time_id).__name__)
-        print(">>> rowCount =", self.model.rowCount())
 
+
+    def toggle_p2(self):
         if self.last_time_id is None:
-            print(">>> ВЫХОД: last_time_id is None")
             return
         if self.running:
-            print(">>> ВЫХОД: running")
+            return
+        if self.last_penalty == 2000:
+            new_penalty = 0
+        else:
+            new_penalty = 2000
+
+        q = QSqlQuery()
+        q.prepare("UPDATE times SET penalty = ? WHERE id = ?")
+        q.addBindValue(new_penalty)
+        q.addBindValue(self.last_time_id)
+        if not q.exec():
             return
 
-        reply = QMessageBox.question(
-            self, "Подтверждение удаления",
-            "Удалить последнюю сборку?",
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-            QMessageBox.StandardButton.No
+        self.last_penalty = new_penalty
+        self.model.select()
+        self.statusBar().showMessage(
+            "Штраф +2 применён" if new_penalty else "Штраф +2 снят", 3000
         )
-        print(">>> reply =", reply)
-        if reply != QMessageBox.StandardButton.Yes:
+        print("+2")
+
+
+    def toggle_DNF(self):
+        if self.last_time_id is None:
+            return
+        if self.running:
+            return
+        if self.last_penalty == -1:
+            new_penalty = 0
+        else:
+            new_penalty = -1
+
+        q = QSqlQuery()
+        q.prepare("UPDATE times SET penalty = ? WHERE id = ?")
+        q.addBindValue(new_penalty)
+        q.addBindValue(self.last_time_id)
+        if not q.exec():
             return
 
-        target = int(self.last_time_id)  # приводим к int
-        for row in range(self.model.rowCount()):
-            val = self.model.data(self.model.index(row, 0))
-            print(f">>> row={row} id={val!r} ({type(val).__name__}) vs target={target}")
-            if val is not None and int(val) == target:
-                print(">>> НАШЛИ, removeRow")
-                self.model.removeRow(row)
-                ok = self.model.submitAll()
-                print(">>> submitAll =", ok)
-                if ok:
-                    self.model.select()
-                    print("Сборка удалена", target)
-                    self.last_time_id = None
-                    self.statusBar().showMessage("Сборка удалена", 3000)
-                else:
-                    print(">>> ОШИБКА submitAll:", self.model.lastError().text())
-                    QMessageBox.critical(self, "Ошибка",
-                                         f"Не удалось удалить: {self.model.lastError().text()}")
-                    self.model.revertAll()
-                return
-
-        print(">>> строка не найдена, сбрасываю last_time_id")
-        self.last_time_id = None"""
-
+        self.last_penalty = new_penalty
+        self.model.select()
+        self.statusBar().showMessage(
+            "Штраф DNF применён" if new_penalty else "Штраф DNF снят", 3000
+        )
+        print("DNF")
 
 
 
