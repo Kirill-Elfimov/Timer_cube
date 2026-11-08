@@ -5,7 +5,7 @@ from time import monotonic
 from PyQt6.QtWidgets import QApplication, QMainWindow, QMessageBox
 from PyQt6.QtCore import QTimer, Qt
 from PyQt6.QtGui import QFont
-from PyQt6.QtSql import QSqlDatabase, QSqlRecord, QSqlQuery, QSqlTableModel
+from PyQt6.QtSql import QSqlDatabase, QSqlQuery, QSqlTableModel
 
 from timer_ui import Ui_Form
 from scrambles import scramble_333, scramble_222
@@ -69,6 +69,7 @@ class MyWidget(QMainWindow, Ui_Form):
         self.running = False
         self.last_tick = None
         self.flag = True # Остановлен таймер или нет
+        self.last_time_id = None
 
         self.timer = QTimer(self)
         self.timer.setInterval(10)  # обновление каждые 10 мс
@@ -90,6 +91,8 @@ class MyWidget(QMainWindow, Ui_Form):
         self.choice_of_discipline.addItems(disciplines.keys())
         self.generation()
         self.choice_of_discipline.currentTextChanged.connect(self.generation)
+
+        self.delete_button.clicked.connect(self.delete_time)
 
 
         # Поле со скрамблом
@@ -176,8 +179,96 @@ class MyWidget(QMainWindow, Ui_Form):
                   QSqlDatabase.database().lastError().text())
             self.model.revertAll()
             return False
-        print(f"Сборка {time_ms} мс добавлена, id={record.value('id')}")
+        q = QSqlQuery()
+        q.exec("SELECT last_insert_rowid()")
+        real_id = int(q.value(0)) if q.next() else None
+        print(f"Сборка {time_ms} мс добавлена, id={real_id}")
+        self.last_time_id = real_id
+        self.last_time_ms = time_ms
+        self.last_penalty = 0
         return True
+
+
+
+
+    # Удаление сборки из БД
+    def delete_time(self):
+        if self.last_time_id is None:
+            return
+        if self.running:
+            return
+
+        reply = QMessageBox.question(
+            self, "Подтверждение удаления",
+            f"Удалить последнюю сборку?",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No
+        )
+        if reply != QMessageBox.StandardButton.Yes:
+            return
+
+        for row in range(self.model.rowCount()):
+            if self.model.data(self.model.index(row, 0)) == self.last_time_id:
+                self.model.removeRow(row)
+                if self.model.submitAll():
+                    self.model.select()
+                    print("Сборка удалена", self.last_time_id)
+                    self.last_time_id = None
+                    self.statusBar().showMessage("Сборка удалена", 3000)
+                else:
+                    QMessageBox.critical(
+                        self, "Ошибка",
+                        f"Не удалось удалить: {self.model.lastError().text()}"
+                    )
+                    self.model.revertAll()
+                return
+        self.last_time_id = None
+
+"""    def delete_time(self):
+        print(">>> delete_time вызван, last_time_id =", self.last_time_id,
+              "type =", type(self.last_time_id).__name__)
+        print(">>> rowCount =", self.model.rowCount())
+
+        if self.last_time_id is None:
+            print(">>> ВЫХОД: last_time_id is None")
+            return
+        if self.running:
+            print(">>> ВЫХОД: running")
+            return
+
+        reply = QMessageBox.question(
+            self, "Подтверждение удаления",
+            "Удалить последнюю сборку?",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No
+        )
+        print(">>> reply =", reply)
+        if reply != QMessageBox.StandardButton.Yes:
+            return
+
+        target = int(self.last_time_id)  # приводим к int
+        for row in range(self.model.rowCount()):
+            val = self.model.data(self.model.index(row, 0))
+            print(f">>> row={row} id={val!r} ({type(val).__name__}) vs target={target}")
+            if val is not None and int(val) == target:
+                print(">>> НАШЛИ, removeRow")
+                self.model.removeRow(row)
+                ok = self.model.submitAll()
+                print(">>> submitAll =", ok)
+                if ok:
+                    self.model.select()
+                    print("Сборка удалена", target)
+                    self.last_time_id = None
+                    self.statusBar().showMessage("Сборка удалена", 3000)
+                else:
+                    print(">>> ОШИБКА submitAll:", self.model.lastError().text())
+                    QMessageBox.critical(self, "Ошибка",
+                                         f"Не удалось удалить: {self.model.lastError().text()}")
+                    self.model.revertAll()
+                return
+
+        print(">>> строка не найдена, сбрасываю last_time_id")
+        self.last_time_id = None"""
 
 
 
