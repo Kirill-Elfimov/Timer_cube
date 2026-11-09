@@ -2,10 +2,10 @@ import sys
 from mimetypes import add_type
 from time import monotonic
 
-from PyQt6.QtWidgets import QApplication, QMainWindow, QMessageBox
+from PyQt6.QtWidgets import QApplication, QMainWindow, QMessageBox, QStyledItemDelegate
 from PyQt6.QtCore import QTimer, Qt
 from PyQt6.QtGui import QFont
-from PyQt6.QtSql import QSqlDatabase, QSqlQuery, QSqlTableModel
+from PyQt6.QtSql import QSqlDatabase, QSqlQuery, QSqlTableModel, QSqlTableModel
 
 from timer_ui import Ui_Form
 from scrambles import scramble_333, scramble_222
@@ -56,13 +56,36 @@ class MyWidget(QMainWindow, Ui_Form):
         super().__init__()
         self.setupUi(self)
 
-
         self.model = QSqlTableModel(self)
         self.model.setTable("times")
         self.model.setEditStrategy(QSqlTableModel.EditStrategy.OnManualSubmit)
         self.model.select()  # ← сначала загрузка
         self.model.setHeaderData(0, Qt.Orientation.Horizontal, "ID")
         self.model.setHeaderData(1, Qt.Orientation.Horizontal, "Время(мс)")
+
+
+        # Твблица с прошлыми сборками
+
+        self.model.setTable("times")  # Указываем таблицу
+
+        # Устанавливаем красивые заголовки столбцов
+        # (потому что «id» и «completed» — не самые понятные названия)
+        self.model.setHeaderData(0, Qt.Orientation.Horizontal, "ID")
+        self.model.setHeaderData(1, Qt.Orientation.Horizontal, "Дисциплина")
+        self.model.setHeaderData(2, Qt.Orientation.Horizontal, "Время (мс)")
+        self.model.setHeaderData(3, Qt.Orientation.Horizontal, "Штраф")
+
+        # Загружаем данные из базы — без этого вызова таблица будет пустая!
+        self.model.select()
+
+
+        self.tableView_times.setModel(self.model)
+
+        # Немного косметики
+        self.tableView_times.resizeColumnsToContents()  # Подгоняем ширину столбцов
+        self.tableView_times.setAlternatingRowColors(True)  # Чередуем цвета строк
+        self.tableView_times.setItemDelegateForColumn(2, TimeDelegate(self.tableView_times))
+        self.tableView_times.setItemDelegateForColumn(3, PenaltyDelegate(self.tableView_times))
 
 
 
@@ -193,6 +216,7 @@ class MyWidget(QMainWindow, Ui_Form):
         self.last_time_id = real_id
         self.last_time_ms = time_ms
         self.last_penalty = 0
+        self.model.select()
         return True
 
 
@@ -279,6 +303,31 @@ class MyWidget(QMainWindow, Ui_Form):
             "Штраф DNF применён" if new_penalty else "Штраф DNF снят", 3000
         )
         print("DNF")
+
+
+
+class TimeDelegate(QStyledItemDelegate):
+    def displayText(self, value, locale):
+        try:
+            ms = int(value)
+        except (TypeError, ValueError):
+            return super().displayText(value, locale)
+        minutes = ms // 60000
+        seconds = (ms % 60000) // 1000
+        hundredths = (ms % 1000) // 10
+        return f"{minutes:02d}:{seconds:02d}.{hundredths:02d}"
+
+class PenaltyDelegate(QStyledItemDelegate):
+    def displayText(self, value, locale):
+        try:
+            pen = int(value)
+        except (TypeError, ValueError):
+            return super().displayText(value, locale)
+        if pen == 2000:
+            return "+2"
+        elif pen == -1:
+            return "DNF"
+
 
 
 

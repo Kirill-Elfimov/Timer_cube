@@ -23,7 +23,7 @@
     </rect>
    </property>
    <property name="currentIndex">
-    <number>0</number>
+    <number>1</number>
    </property>
    <widget class="QWidget" name="tab">
     <attribute name="title">
@@ -119,6 +119,26 @@
     <attribute name="title">
      <string>Tab 2</string>
     </attribute>
+    <widget class="QTableView" name="tableView_times">
+     <property name="geometry">
+      <rect>
+       <x>20</x>
+       <y>50</y>
+       <width>561</width>
+       <height>331</height>
+      </rect>
+     </property>
+    </widget>
+    <widget class="QComboBox" name="choice_of_discipline_hist">
+     <property name="geometry">
+      <rect>
+       <x>20</x>
+       <y>10</y>
+       <width>82</width>
+       <height>26</height>
+      </rect>
+     </property>
+    </widget>
    </widget>
   </widget>
  </widget>

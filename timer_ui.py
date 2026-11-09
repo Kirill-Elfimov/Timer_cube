@@ -52,10 +52,16 @@ class Ui_Form(object):
         self.tabWidget.addTab(self.tab, "")
         self.tab_2 = QtWidgets.QWidget()
         self.tab_2.setObjectName("tab_2")
+        self.tableView_times = QtWidgets.QTableView(parent=self.tab_2)
+        self.tableView_times.setGeometry(QtCore.QRect(20, 50, 561, 331))
+        self.tableView_times.setObjectName("tableView_times")
+        self.choice_of_discipline_hist = QtWidgets.QComboBox(parent=self.tab_2)
+        self.choice_of_discipline_hist.setGeometry(QtCore.QRect(20, 10, 82, 26))
+        self.choice_of_discipline_hist.setObjectName("choice_of_discipline_hist")
         self.tabWidget.addTab(self.tab_2, "")
 
         self.retranslateUi(Form)
-        self.tabWidget.setCurrentIndex(0)
+        self.tabWidget.setCurrentIndex(1)
         QtCore.QMetaObject.connectSlotsByName(Form)
 
     def retranslateUi(self, Form):
