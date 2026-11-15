@@ -1,6 +1,8 @@
 import sys
 from mimetypes import add_type
 from time import monotonic
+import sqlite3
+from contextlib import closing
 
 from PyQt6.QtWidgets import QApplication, QMainWindow, QMessageBox, QStyledItemDelegate
 from PyQt6.QtCore import QTimer, Qt
@@ -58,10 +60,9 @@ class MyWidget(QMainWindow, Ui_Form):
 
         self.model = QSqlTableModel(self)
         self.model.setTable("times")
+        self.model.setSort(0, Qt.SortOrder.DescendingOrder)
         self.model.setEditStrategy(QSqlTableModel.EditStrategy.OnManualSubmit)
-        self.model.select()  # ← сначала загрузка
-        self.model.setHeaderData(0, Qt.Orientation.Horizontal, "ID")
-        self.model.setHeaderData(1, Qt.Orientation.Horizontal, "Время(мс)")
+        self.model.select()
 
 
         # Твблица с прошлыми сборками
@@ -213,6 +214,9 @@ class MyWidget(QMainWindow, Ui_Form):
         q.exec("SELECT last_insert_rowid()")
         real_id = int(q.value(0)) if q.next() else None
         print(f"Сборка {time_ms} мс добавлена, id={real_id}")
+        self.sr_ao5()
+        self.sr_ao12()
+        self.sr_ao100()
         self.last_time_id = real_id
         self.last_time_ms = time_ms
         self.last_penalty = 0
@@ -303,6 +307,87 @@ class MyWidget(QMainWindow, Ui_Form):
             "Штраф DNF применён" if new_penalty else "Штраф DNF снят", 3000
         )
         print("DNF")
+
+
+
+    def sr_ao5(self):
+        discipline = self.choice_of_discipline.currentText()
+
+
+        sql = ("SELECT time_ms, penalty FROM times "
+                "WHERE discipline = ? AND penalty != -1 "
+                "ORDER BY id DESC LIMIT 5")
+        params = (discipline,)
+
+        try:
+            with closing(sqlite3.connect("my_assemblies")) as con:
+                con.row_factory = sqlite3.Row
+                rows = con.execute(sql, params).fetchall()
+
+            if len(rows) < 5:
+                print(f"Для ao5 нужно 5 сборок, есть {len(rows)}")
+                return
+
+            totals = sorted(r["time_ms"] + r["penalty"] for r in rows)
+            ao5_ms = sum(totals[1:-1]) / 3
+            print(f"ao5 ({discipline}) = {ao5_ms / 1000:.2f} с")
+
+        except sqlite3.Error as e:
+            print("SQLite error:", e)
+
+
+
+    def sr_ao12(self):
+        discipline = self.choice_of_discipline.currentText()
+
+
+        sql = ("SELECT time_ms, penalty FROM times "
+                "WHERE discipline = ? AND penalty != -1 "
+                "ORDER BY id DESC LIMIT 12")
+        params = (discipline,)
+
+        try:
+            with closing(sqlite3.connect("my_assemblies")) as con:
+                con.row_factory = sqlite3.Row
+                rows = con.execute(sql, params).fetchall()
+
+            if len(rows) < 12:
+                print(f"Для ao12 нужно 12 сборок, есть {len(rows)}")
+                return
+
+            totals = sorted(r["time_ms"] + r["penalty"] for r in rows)
+            ao12_ms = sum(totals[1:-1]) / 10
+            print(f"ao12 ({discipline}) = {ao12_ms / 1000:.2f} с")
+
+        except sqlite3.Error as e:
+            print("SQLite error:", e)
+
+
+
+    def sr_ao100(self):
+        discipline = self.choice_of_discipline.currentText()
+
+
+        sql = ("SELECT time_ms, penalty FROM times "
+                "WHERE discipline = ? AND penalty != -1 "
+                "ORDER BY id DESC LIMIT 100")
+        params = (discipline,)
+
+        try:
+            with closing(sqlite3.connect("my_assemblies")) as con:
+                con.row_factory = sqlite3.Row
+                rows = con.execute(sql, params).fetchall()
+
+            if len(rows) < 100:
+                print(f"Для ao100 нужно 100 сборок, есть {len(rows)}")
+                return
+
+            totals = sorted(r["time_ms"] + r["penalty"] for r in rows)
+            ao12_ms = sum(totals[1:-1]) / 90
+            print(f"ao100 ({discipline}) = {ao12_ms / 1000:.2f} с")
+
+        except sqlite3.Error as e:
+            print("SQLite error:", e)
 
 
 
