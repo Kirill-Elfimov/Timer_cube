@@ -104,7 +104,7 @@ class MyWidget(QMainWindow, Ui_Form):
 
         self.timer_output.setText("00:00.00")
         self.timer_output.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.timer_output.setFont(QFont("Consolas", 36, QFont.Weight.Bold))
+        self.timer_output.setFont(QFont("Consolas", 42, QFont.Weight.Bold))
 
 
         # Фокус окна для роботы пробела
@@ -126,6 +126,21 @@ class MyWidget(QMainWindow, Ui_Form):
 
         # Поле со скрамблом
         self.scramble_output.setEnabled(False)
+
+        self.ao5_l = None
+        self.ao12_l = None
+        self.ao100_l = None
+        self.ao1000_l = None
+        self.general_l = None
+        self.best_l = None
+
+        self.sr_ao5()
+        self.sr_ao12()
+        self.sr_ao100()
+        self.sr_ao1000()
+        self.sr_general()
+        self.sr_best()
+        self.change_in_statistics()
 
     def generation(self):
         self.scramble_output.setText(disciplines[self.choice_of_discipline.currentText()]())
@@ -217,6 +232,10 @@ class MyWidget(QMainWindow, Ui_Form):
         self.sr_ao5()
         self.sr_ao12()
         self.sr_ao100()
+        self.sr_ao1000()
+        self.sr_general()
+        self.sr_best()
+        self.change_in_statistics()
         self.last_time_id = real_id
         self.last_time_ms = time_ms
         self.last_penalty = 0
@@ -250,6 +269,13 @@ class MyWidget(QMainWindow, Ui_Form):
                     print("Сборка удалена", self.last_time_id)
                     self.last_time_id = None
                     self.statusBar().showMessage("Сборка удалена", 3000)
+                    self.sr_ao5()
+                    self.sr_ao12()
+                    self.sr_ao100()
+                    self.sr_ao1000()
+                    self.sr_general()
+                    self.sr_best()
+                    self.change_in_statistics()
                 else:
                     self.model.revertAll()
                 return
@@ -278,6 +304,13 @@ class MyWidget(QMainWindow, Ui_Form):
 
         self.last_penalty = new_penalty
         self.model.select()
+        self.sr_ao5()
+        self.sr_ao12()
+        self.sr_ao100()
+        self.sr_ao1000()
+        self.sr_general()
+        self.sr_best()
+        self.change_in_statistics()
         self.statusBar().showMessage(
             "Штраф +2 применён" if new_penalty else "Штраф +2 снят", 3000
         )
@@ -303,10 +336,40 @@ class MyWidget(QMainWindow, Ui_Form):
 
         self.last_penalty = new_penalty
         self.model.select()
+        self.sr_ao5()
+        self.sr_ao12()
+        self.sr_ao100()
+        self.sr_ao1000()
+        self.sr_general()
+        self.sr_best()
+        self.change_in_statistics()
         self.statusBar().showMessage(
             "Штраф DNF применён" if new_penalty else "Штраф DNF снят", 3000
         )
         print("DNF")
+
+    def sr_best(self):
+        discipline = self.choice_of_discipline.currentText()
+
+        sql = ("SELECT time_ms, penalty FROM times "
+               "WHERE discipline = ? AND penalty != -1 "
+               "ORDER BY time_ms + penalty ASC LIMIT 1")
+        params = (discipline,)
+
+        try:
+            with closing(sqlite3.connect("my_assemblies")) as con:
+                con.row_factory = sqlite3.Row
+                rows = con.execute(sql, params).fetchall()
+
+            if len(rows) == 0:
+                self.best_l = None
+                return
+
+            best_ms = rows[0]["time_ms"] + rows[0]["penalty"]
+            self.best_l = round(best_ms / 1000, 2)
+            print(f"Лучшее ({discipline}) = {self.best_l} с")
+        except sqlite3.Error as e:
+            print("SQLite error:", e)
 
 
 
@@ -326,12 +389,13 @@ class MyWidget(QMainWindow, Ui_Form):
 
             if len(rows) < 5:
                 print(f"Для ao5 нужно 5 сборок, есть {len(rows)}")
+                self.ao5_l = None
                 return
 
             totals = sorted(r["time_ms"] + r["penalty"] for r in rows)
             ao5_ms = sum(totals[1:-1]) / 3
-            print(f"ao5 ({discipline}) = {ao5_ms / 1000:.2f} с")
-
+            self.ao5_l = round(ao5_ms / 1000, 2)
+            print(f"ao5 ({discipline}) = {self.ao5_l} с")
         except sqlite3.Error as e:
             print("SQLite error:", e)
 
@@ -353,11 +417,13 @@ class MyWidget(QMainWindow, Ui_Form):
 
             if len(rows) < 12:
                 print(f"Для ao12 нужно 12 сборок, есть {len(rows)}")
+                self.ao12_l = None
                 return
 
             totals = sorted(r["time_ms"] + r["penalty"] for r in rows)
             ao12_ms = sum(totals[1:-1]) / 10
-            print(f"ao12 ({discipline}) = {ao12_ms / 1000:.2f} с")
+            self.ao12_l = round(ao12_ms / 1000, 2)
+            print(f"ao12 ({discipline}) = {self.ao12_l} с")
 
         except sqlite3.Error as e:
             print("SQLite error:", e)
@@ -380,14 +446,78 @@ class MyWidget(QMainWindow, Ui_Form):
 
             if len(rows) < 100:
                 print(f"Для ao100 нужно 100 сборок, есть {len(rows)}")
+                self.ao100_l = None
                 return
 
             totals = sorted(r["time_ms"] + r["penalty"] for r in rows)
-            ao12_ms = sum(totals[1:-1]) / 90
-            print(f"ao100 ({discipline}) = {ao12_ms / 1000:.2f} с")
+            ao100_ms = sum(totals[1:-1]) / 90
+            self.ao100_l = round(ao100_ms / 1000, 2)
+            print(f"ao100 ({discipline}) = {self.ao100_l} с")
 
         except sqlite3.Error as e:
             print("SQLite error:", e)
+
+
+
+    def sr_ao1000(self):
+        discipline = self.choice_of_discipline.currentText()
+
+
+        sql = ("SELECT time_ms, penalty FROM times "
+                "WHERE discipline = ? AND penalty != -1 "
+                "ORDER BY id DESC LIMIT 1000")
+        params = (discipline,)
+
+        try:
+            with closing(sqlite3.connect("my_assemblies")) as con:
+                con.row_factory = sqlite3.Row
+                rows = con.execute(sql, params).fetchall()
+
+            if len(rows) < 1000:
+                print(f"Для ao1000 нужно 1000 сборок, есть {len(rows)}")
+                self.ao1000_l = None
+                return
+
+            totals = sorted(r["time_ms"] + r["penalty"] for r in rows)
+            ao1000_ms = sum(totals[1:-1]) / 950
+            self.ao1000_l = round(ao1000_ms / 1000, 2)
+            print(f"ao1000 ({discipline}) = {self.ao1000_l} с")
+
+        except sqlite3.Error as e:
+            print("SQLite error:", e)
+
+
+    def sr_general(self):
+        discipline = self.choice_of_discipline.currentText()
+
+
+        sql = ("SELECT time_ms, penalty FROM times "
+                "WHERE discipline = ? AND penalty != -1 ")
+        params = (discipline,)
+
+        try:
+            with closing(sqlite3.connect("my_assemblies")) as con:
+                con.row_factory = sqlite3.Row
+                rows = con.execute(sql, params).fetchall()
+
+            if len(rows) < 1:
+                self.general_l = None
+                return
+
+            totals = sorted(r["time_ms"] + r["penalty"] for r in rows)
+            general_ms = sum(totals[1:-1]) / len(totals[1:-1])
+            self.general_l = round(general_ms / 1000, 2)
+            print(f"Среднее ({discipline}) = {self.general_l} с")
+        except sqlite3.Error as e:
+            print("SQLite error:", e)
+
+
+    def change_in_statistics(self):
+        self.statistics_label.setText(f"Лучшее = {self.best_l}\nao5 = {self.ao5_l}\nao12 = {self.ao12_l}\nao100 = {self.ao100_l}")
+        self.statistics_label.setFont(QFont("Consolas", 18, QFont.Weight.Bold))
+        self.statistics_label_2.setText(f"Лучшее = {self.best_l}\nao5 = {self.ao5_l}\nao12 = {self.ao12_l}\nao100 = {self.ao100_l}\n"
+                                        f"ao1000 = {self.ao1000_l}\nСреднее = {self.general_l}")
+        self.statistics_label_2.setFont(QFont("Consolas", 18, QFont.Weight.Bold))
 
 
 
