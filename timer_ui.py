@@ -53,6 +53,15 @@ class Ui_Form(object):
         self.statistics_label.setGeometry(QtCore.QRect(10, 340, 221, 121))
         self.statistics_label.setText("")
         self.statistics_label.setObjectName("statistics_label")
+        self.bg_color_button = QtWidgets.QPushButton(parent=self.tab)
+        self.bg_color_button.setGeometry(QtCore.QRect(660, 370, 81, 26))
+        self.bg_color_button.setObjectName("bg_color_button")
+        self.buttons_color_button = QtWidgets.QPushButton(parent=self.tab)
+        self.buttons_color_button.setGeometry(QtCore.QRect(660, 400, 81, 26))
+        self.buttons_color_button.setObjectName("buttons_color_button")
+        self.font_color_button = QtWidgets.QPushButton(parent=self.tab)
+        self.font_color_button.setGeometry(QtCore.QRect(660, 430, 81, 26))
+        self.font_color_button.setObjectName("font_color_button")
         self.tabWidget.addTab(self.tab, "")
         self.tab_2 = QtWidgets.QWidget()
         self.tab_2.setObjectName("tab_2")
@@ -66,7 +75,7 @@ class Ui_Form(object):
         self.tabWidget.addTab(self.tab_2, "")
 
         self.retranslateUi(Form)
-        self.tabWidget.setCurrentIndex(1)
+        self.tabWidget.setCurrentIndex(0)
         QtCore.QMetaObject.connectSlotsByName(Form)
 
     def retranslateUi(self, Form):
@@ -77,5 +86,8 @@ class Ui_Form(object):
         self.dnf_button.setText(_translate("Form", "DNF"))
         self.p2_button.setText(_translate("Form", "+2"))
         self.delete_button.setText(_translate("Form", "Delete"))
+        self.bg_color_button.setText(_translate("Form", "PushButton"))
+        self.buttons_color_button.setText(_translate("Form", "PushButton"))
+        self.font_color_button.setText(_translate("Form", "PushButton"))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab), _translate("Form", "Tab 1"))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab_2), _translate("Form", "Tab 2"))

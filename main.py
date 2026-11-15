@@ -6,8 +6,10 @@ from contextlib import closing
 
 from PyQt6.QtWidgets import QApplication, QMainWindow, QMessageBox, QStyledItemDelegate
 from PyQt6.QtCore import QTimer, Qt
-from PyQt6.QtGui import QFont
+from PyQt6.QtGui import QFont, QColor
 from PyQt6.QtSql import QSqlDatabase, QSqlQuery, QSqlTableModel, QSqlTableModel
+
+from PyQt6.QtWidgets import QColorDialog  # если ещё нет
 
 from timer_ui import Ui_Form
 from scrambles import scramble_333, scramble_222
@@ -142,6 +144,19 @@ class MyWidget(QMainWindow, Ui_Form):
         self.sr_best()
         self.change_in_statistics()
 
+        self.bg_color = "#ffffff"
+        self.buttons_color = "#f0f0f0"
+        self.font_color = "#000000"
+
+        self.apply_background_color(QColor(self.bg_color))
+        self.apply_buttons_color(QColor(self.buttons_color))
+        self.apply_font_color(QColor(self.font_color))
+        self.apply_all_styles()
+
+        self.bg_color_button.clicked.connect(lambda: self.pick_color("background"))
+        self.buttons_color_button.clicked.connect(lambda: self.pick_color("buttons"))
+        self.font_color_button.clicked.connect(lambda: self.pick_color("font"))
+
     def generation(self):
         self.scramble_output.setText(disciplines[self.choice_of_discipline.currentText()]())
 
@@ -158,7 +173,7 @@ class MyWidget(QMainWindow, Ui_Form):
 
     def keyReleaseEvent(self, event):
         if event.key() == Qt.Key.Key_Space and not event.isAutoRepeat():
-            self.timer_output.setStyleSheet("")
+            self.timer_output.setStyleSheet(f"color: {self.font_color};")
             if not self.running and self.flag:
                 self.start()
             self.flag = True
@@ -518,6 +533,71 @@ class MyWidget(QMainWindow, Ui_Form):
         self.statistics_label_2.setText(f"Лучшее = {self.best_l}\nao5 = {self.ao5_l}\nao12 = {self.ao12_l}\nao100 = {self.ao100_l}\n"
                                         f"ao1000 = {self.ao1000_l}\nСреднее = {self.general_l}")
         self.statistics_label_2.setFont(QFont("Consolas", 18, QFont.Weight.Bold))
+
+
+
+    def pick_color(self, target):
+        color = QColorDialog.getColor()
+        if not color.isValid():
+            return
+
+        if target == "background":
+            self.apply_background_color(color)
+        elif target == "buttons":
+            self.apply_buttons_color(color)
+        elif target == "font":
+            self.apply_font_color(color)
+
+    def apply_background_color(self, color):
+        self.bg_color = color.name()
+        self.apply_all_styles()
+        print(f"Фон: {self.bg_color}")
+
+    def apply_buttons_color(self, color):
+        self.buttons_color = color.name()
+        self.apply_all_styles()
+        print(f"Кнопки: {self.buttons_color}")
+
+    def apply_font_color(self, color):
+        self.font_color = color.name()
+        self.apply_all_styles()
+        print(f"Шрифт: {self.font_color}")
+
+    def apply_all_styles(self):
+        bg = self.bg_color
+        btn = self.buttons_color
+        fnt = self.font_color
+
+        self.setStyleSheet(f"""
+            QMainWindow {{ background-color: {bg}; }}
+            QTabWidget::pane {{ background-color: {bg}; border: none; }}
+            QTabWidget > QWidget {{ background-color: {bg}; }}
+            QTabBar::tab {{ background-color: {bg}; padding: 6px 12px; }}
+            QTabBar::tab:selected {{ background-color: {bg}; font-weight: bold; }}
+            QPushButton {{ background-color: {btn}; }}
+            QTableView {{
+    background-color: {bg};
+    alternate-background-color: {bg};
+    gridline-color: {bg};
+    color: {fnt};
+    selection-background-color: {bg};
+    selection-color: {fnt};
+}}
+QHeaderView::section {{
+    background-color: {bg};
+    color: {fnt};
+    border: 1px solid {bg};
+    padding: 4px;
+}}
+QTableView::item {{
+    background-color: {bg};
+}}
+        """)
+
+        self.timer_output.setStyleSheet(f"color: {fnt};")
+        self.statistics_label.setStyleSheet(f"color: {fnt};")
+        self.statistics_label_2.setStyleSheet(f"color: {fnt};")
+        self.scramble_output.setStyleSheet(f"color: {fnt};")
 
 
 
