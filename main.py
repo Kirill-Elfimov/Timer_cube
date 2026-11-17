@@ -1,5 +1,4 @@
 import sys
-from mimetypes import add_type
 from time import monotonic
 import sqlite3
 from contextlib import closing
@@ -7,9 +6,7 @@ from contextlib import closing
 from PyQt6.QtWidgets import QApplication, QMainWindow, QMessageBox, QStyledItemDelegate
 from PyQt6.QtCore import QTimer, Qt
 from PyQt6.QtGui import QFont, QColor
-from PyQt6.QtSql import QSqlDatabase, QSqlQuery, QSqlTableModel, QSqlTableModel
-
-from PyQt6.QtWidgets import QColorDialog  # если ещё нет
+from PyQt6.QtSql import QSqlDatabase, QSqlQuery, QSqlTableModel
 
 from timer_ui import Ui_Form
 from scrambles import (scramble_333, scramble_222, scramble_444, scramble_555
@@ -312,7 +309,7 @@ class MyWidget(QMainWindow, Ui_Form):
                 self.flag = False
             event.accept()
             return
-        super().keyPressEvent(event)  # Исправлено с keyReleaseEvent на keyPressEvent
+        super().keyPressEvent(event)
 
     def keyReleaseEvent(self, event):
         if event.key() == Qt.Key.Key_Space and not event.isAutoRepeat():
@@ -343,7 +340,7 @@ class MyWidget(QMainWindow, Ui_Form):
             return
         self.running = False
         self.timer.stop()
-        # Досчитываем «хвост» после последнего тика
+        # Досчитываем после последнего тика
         if self.last_tick is not None:
             self.elapsed_ms += int((monotonic() - self.last_tick) * 1000)
             self.last_tick = None
