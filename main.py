@@ -6,16 +6,168 @@ from contextlib import closing
 
 from PyQt6.QtWidgets import QApplication, QMainWindow, QMessageBox, QStyledItemDelegate
 from PyQt6.QtCore import QTimer, Qt
-from PyQt6.QtGui import QFont
+from PyQt6.QtGui import QFont, QColor
 from PyQt6.QtSql import QSqlDatabase, QSqlQuery, QSqlTableModel, QSqlTableModel
 
+from PyQt6.QtWidgets import QColorDialog  # если ещё нет
+
 from timer_ui import Ui_Form
-from scrambles import scramble_333, scramble_222
+from scrambles import (scramble_333, scramble_222, scramble_444, scramble_555
+, scramble_megaminx, scramble_pyraminx, scramble_clock
+, scramble_fto, scramble_skewb, scramble_squareOne)
 
 disciplines = {
     "3x3": scramble_333,
-    "2x2": scramble_222
+    "2x2": scramble_222,
+    "4x4": scramble_444,
+    "5x5": scramble_555,
+    "мегаминкс": scramble_megaminx,
+    "скваер": scramble_squareOne,
+    "скьюб": scramble_skewb,
+    "фто": scramble_fto,
+    "клок": scramble_clock,
+    "пира": scramble_pyraminx
 }
+
+
+DARK_STYLESHEET = """
+    QMainWindow {
+        background-color: #2b2b2b;
+    }
+    QTabWidget::pane {
+        border: 1px solid #555;
+        background-color: #2b2b2b;
+    }
+    QTabBar::tab {
+        background-color: #3c3f41;
+        color: #a9b7c6;
+        padding: 6px 12px;
+    }
+    QTabBar::tab:selected {
+        background-color: #2b2b2b;
+        font-weight: bold;
+    }
+    QWidget {
+        color: #a9b7c6;
+    }
+    QPushButton {
+        background-color: #3c3f41;
+        color: #a9b7c6;
+        border: 1px solid #555;
+        border-radius: 5px;
+        padding: 5px 10px;
+    }
+    QPushButton:hover {
+        border: 1px solid #3498db;
+    }
+    QPushButton:pressed {
+        border: 1px solid #2980b9;
+    }
+    QTableView {
+        background-color: #2b2b2b;
+        alternate-background-color: #3c3f41;
+        gridline-color: #555;
+        color: #a9b7c6;
+        selection-background-color: #3498db;
+        selection-color: #ffffff;
+    }
+    QHeaderView::section {
+        background-color: #3c3f41;
+        color: #a9b7c6;
+        border: 1px solid #555;
+        padding: 4px;
+    }
+    QLineEdit, QTextEdit, QPlainTextEdit {
+        background-color: #3c3f41;
+        color: #a9b7c6;
+        border: 1px solid #555;
+    }
+    /* Таймер и метки */
+    QLabel#timer_output {
+        color: #ffffff;
+    }
+    QLabel {
+        color: #a9b7c6;
+    }
+     QComboBox {
+        background-color: #3c3f41;
+        color: #a9b7c6;
+        border: 1px solid #555;
+        border-radius: 3px;
+        padding: 3px 10px;
+    }
+    QComboBox::drop-down {
+        border: none;
+    }
+    QComboBox QAbstractItemView {
+        background-color: #3c3f41;
+        color: #a9b7c6;
+        selection-background-color: #3498db;
+        selection-color: #ffffff;
+    }
+"""
+
+LIGHT_STYLESHEET = """
+    QMainWindow {
+        background-color: #f0f0f0;
+    }
+    QTabWidget::pane {
+        border: 1px solid #ccc;
+        background-color: #f0f0f0;
+    }
+    QTabBar::tab {
+        background-color: #e0e0e0;
+        color: #333333;
+        padding: 6px 12px;
+    }
+    QTabBar::tab:selected {
+        background-color: #f0f0f0;
+        font-weight: bold;
+    }
+    QWidget {
+        color: #333333;
+    }
+    QPushButton {
+        background-color: #ffffff;
+        color: #333333;
+        border: 1px solid #ccc;
+        border-radius: 5px;
+        padding: 5px 10px;
+    }
+    QPushButton:hover {
+        border: 1px solid #3498db;
+    }
+    QPushButton:pressed {
+        border: 1px solid #2980b9;
+    }
+    QTableView {
+        background-color: #ffffff;
+        alternate-background-color: #f9f9f9;
+        gridline-color: #ccc;
+        color: #333333;
+        selection-background-color: #3498db;
+        selection-color: #ffffff;
+    }
+    QHeaderView::section {
+        background-color: #e0e0e0;
+        color: #333333;
+        border: 1px solid #ccc;
+        padding: 4px;
+    }
+    QLineEdit, QTextEdit, QPlainTextEdit {
+        background-color: #ffffff;
+        color: #333333;
+        border: 1px solid #ccc;
+    }
+    /* Таймер и метки */
+    QLabel#timer_output {
+        color: #000000;
+    }
+    QLabel {
+        color: #333333;
+    }
+"""
+
 
 # Подключение БД
 def create_connection():
@@ -104,7 +256,7 @@ class MyWidget(QMainWindow, Ui_Form):
 
         self.timer_output.setText("00:00.00")
         self.timer_output.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.timer_output.setFont(QFont("Consolas", 36, QFont.Weight.Bold))
+        self.timer_output.setFont(QFont("Consolas", 48, QFont.Weight.Bold))
 
 
         # Фокус окна для роботы пробела
@@ -127,23 +279,47 @@ class MyWidget(QMainWindow, Ui_Form):
         # Поле со скрамблом
         self.scramble_output.setEnabled(False)
 
+        self.ao5_l = None
+        self.ao12_l = None
+        self.ao100_l = None
+        self.ao1000_l = None
+        self.general_l = None
+        self.best_l = None
+
+        self.sr_ao5()
+        self.sr_ao12()
+        self.sr_ao100()
+        self.sr_ao1000()
+        self.sr_general()
+        self.sr_best()
+        self.change_in_statistics()
+
+        self.is_dark_theme = False
+
+        self.theme_button.clicked.connect(self.toggle_theme)
+        # Применяем тему при запуске
+        self.apply_theme()
+
     def generation(self):
         self.scramble_output.setText(disciplines[self.choice_of_discipline.currentText()]())
 
     def keyPressEvent(self, event):
         if event.key() == Qt.Key.Key_Space and not event.isAutoRepeat():
+            # При нажатии на пробел красим таймер в зеленый
             self.timer_output.setStyleSheet("color: green;")
             if self.running:
                 self.pause()
                 self.flag = False
             event.accept()
             return
-        super().keyPressEvent(event)
-
+        super().keyPressEvent(event)  # Исправлено с keyReleaseEvent на keyPressEvent
 
     def keyReleaseEvent(self, event):
         if event.key() == Qt.Key.Key_Space and not event.isAutoRepeat():
-            self.timer_output.setStyleSheet("")
+            # Возвращаем цвет в зависимости от выбранной темы
+            color = "#ffffff" if self.is_dark_theme else "#000000"
+            self.timer_output.setStyleSheet(f"color: {color};")
+
             if not self.running and self.flag:
                 self.start()
             self.flag = True
@@ -217,6 +393,10 @@ class MyWidget(QMainWindow, Ui_Form):
         self.sr_ao5()
         self.sr_ao12()
         self.sr_ao100()
+        self.sr_ao1000()
+        self.sr_general()
+        self.sr_best()
+        self.change_in_statistics()
         self.last_time_id = real_id
         self.last_time_ms = time_ms
         self.last_penalty = 0
@@ -250,6 +430,13 @@ class MyWidget(QMainWindow, Ui_Form):
                     print("Сборка удалена", self.last_time_id)
                     self.last_time_id = None
                     self.statusBar().showMessage("Сборка удалена", 3000)
+                    self.sr_ao5()
+                    self.sr_ao12()
+                    self.sr_ao100()
+                    self.sr_ao1000()
+                    self.sr_general()
+                    self.sr_best()
+                    self.change_in_statistics()
                 else:
                     self.model.revertAll()
                 return
@@ -278,6 +465,13 @@ class MyWidget(QMainWindow, Ui_Form):
 
         self.last_penalty = new_penalty
         self.model.select()
+        self.sr_ao5()
+        self.sr_ao12()
+        self.sr_ao100()
+        self.sr_ao1000()
+        self.sr_general()
+        self.sr_best()
+        self.change_in_statistics()
         self.statusBar().showMessage(
             "Штраф +2 применён" if new_penalty else "Штраф +2 снят", 3000
         )
@@ -303,10 +497,40 @@ class MyWidget(QMainWindow, Ui_Form):
 
         self.last_penalty = new_penalty
         self.model.select()
+        self.sr_ao5()
+        self.sr_ao12()
+        self.sr_ao100()
+        self.sr_ao1000()
+        self.sr_general()
+        self.sr_best()
+        self.change_in_statistics()
         self.statusBar().showMessage(
             "Штраф DNF применён" if new_penalty else "Штраф DNF снят", 3000
         )
         print("DNF")
+
+    def sr_best(self):
+        discipline = self.choice_of_discipline.currentText()
+
+        sql = ("SELECT time_ms, penalty FROM times "
+               "WHERE discipline = ? AND penalty != -1 "
+               "ORDER BY time_ms + penalty ASC LIMIT 1")
+        params = (discipline,)
+
+        try:
+            with closing(sqlite3.connect("my_assemblies")) as con:
+                con.row_factory = sqlite3.Row
+                rows = con.execute(sql, params).fetchall()
+
+            if len(rows) == 0:
+                self.best_l = None
+                return
+
+            best_ms = rows[0]["time_ms"] + rows[0]["penalty"]
+            self.best_l = round(best_ms / 1000, 2)
+            print(f"Лучшее ({discipline}) = {self.best_l} с")
+        except sqlite3.Error as e:
+            print("SQLite error:", e)
 
 
 
@@ -326,12 +550,13 @@ class MyWidget(QMainWindow, Ui_Form):
 
             if len(rows) < 5:
                 print(f"Для ao5 нужно 5 сборок, есть {len(rows)}")
+                self.ao5_l = None
                 return
 
             totals = sorted(r["time_ms"] + r["penalty"] for r in rows)
             ao5_ms = sum(totals[1:-1]) / 3
-            print(f"ao5 ({discipline}) = {ao5_ms / 1000:.2f} с")
-
+            self.ao5_l = round(ao5_ms / 1000, 2)
+            print(f"ao5 ({discipline}) = {self.ao5_l} с")
         except sqlite3.Error as e:
             print("SQLite error:", e)
 
@@ -353,11 +578,13 @@ class MyWidget(QMainWindow, Ui_Form):
 
             if len(rows) < 12:
                 print(f"Для ao12 нужно 12 сборок, есть {len(rows)}")
+                self.ao12_l = None
                 return
 
             totals = sorted(r["time_ms"] + r["penalty"] for r in rows)
             ao12_ms = sum(totals[1:-1]) / 10
-            print(f"ao12 ({discipline}) = {ao12_ms / 1000:.2f} с")
+            self.ao12_l = round(ao12_ms / 1000, 2)
+            print(f"ao12 ({discipline}) = {self.ao12_l} с")
 
         except sqlite3.Error as e:
             print("SQLite error:", e)
@@ -380,14 +607,89 @@ class MyWidget(QMainWindow, Ui_Form):
 
             if len(rows) < 100:
                 print(f"Для ao100 нужно 100 сборок, есть {len(rows)}")
+                self.ao100_l = None
                 return
 
             totals = sorted(r["time_ms"] + r["penalty"] for r in rows)
-            ao12_ms = sum(totals[1:-1]) / 90
-            print(f"ao100 ({discipline}) = {ao12_ms / 1000:.2f} с")
+            ao100_ms = sum(totals[5:-5]) / 90
+            self.ao100_l = round(ao100_ms / 1000, 2)
+            print(f"ao100 ({discipline}) = {self.ao100_l} с")
 
         except sqlite3.Error as e:
             print("SQLite error:", e)
+
+
+
+    def sr_ao1000(self):
+        discipline = self.choice_of_discipline.currentText()
+
+
+        sql = ("SELECT time_ms, penalty FROM times "
+                "WHERE discipline = ? AND penalty != -1 "
+                "ORDER BY id DESC LIMIT 1000")
+        params = (discipline,)
+
+        try:
+            with closing(sqlite3.connect("my_assemblies")) as con:
+                con.row_factory = sqlite3.Row
+                rows = con.execute(sql, params).fetchall()
+
+            if len(rows) < 1000:
+                print(f"Для ao1000 нужно 1000 сборок, есть {len(rows)}")
+                self.ao1000_l = None
+                return
+
+            totals = sorted(r["time_ms"] + r["penalty"] for r in rows)
+            ao1000_ms = sum(totals[50:-50]) / 900
+            self.ao1000_l = round(ao1000_ms / 1000, 2)
+            print(f"ao1000 ({discipline}) = {self.ao1000_l} с")
+
+        except sqlite3.Error as e:
+            print("SQLite error:", e)
+
+    def sr_general(self):
+        discipline = self.choice_of_discipline.currentText()
+
+        sql = ("SELECT time_ms, penalty FROM times "
+               "WHERE discipline = ? AND penalty != -1")
+        try:
+            with closing(sqlite3.connect("my_assemblies")) as con:
+                con.row_factory = sqlite3.Row
+                rows = con.execute(sql, (discipline,)).fetchall()
+        except sqlite3.Error as e:
+            print("SQLite error:", e)
+            self.general_l = None
+            return
+
+        if not rows:
+            self.general_l = None
+            return
+
+        totals = [r["time_ms"] + r["penalty"] for r in rows]
+        self.general_l = round(sum(totals) / len(totals) / 1000, 2)
+
+
+    def change_in_statistics(self):
+        self.statistics_label.setText(f"Лучшее = {self.best_l}\nao5 = {self.ao5_l}\nao12 = {self.ao12_l}\nao100 = {self.ao100_l}\n"
+                                        f"ao1000 = {self.ao1000_l}\nСреднее = {self.general_l}")
+        self.statistics_label.setFont(QFont("Consolas", 22, QFont.Weight.Bold))
+
+
+    def toggle_theme(self):
+        self.is_dark_theme = not self.is_dark_theme
+        self.apply_theme()
+
+    def apply_theme(self):
+        if self.is_dark_theme:
+            self.setStyleSheet(DARK_STYLESHEET)
+            self.theme_button.setText("Светлая тема")
+            # Возвращаем цвет таймера для темной темы
+            self.timer_output.setStyleSheet("color: #ffffff;")
+        else:
+            self.setStyleSheet(LIGHT_STYLESHEET)
+            self.theme_button.setText("Тёмная тема")
+            # Возвращаем цвет таймера для светлой темы
+            self.timer_output.setStyleSheet("color: #000000;")
 
 
 
