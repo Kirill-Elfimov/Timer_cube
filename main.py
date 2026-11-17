@@ -5,7 +5,7 @@ from contextlib import closing
 
 from PyQt6.QtWidgets import QApplication, QMainWindow, QMessageBox, QStyledItemDelegate
 from PyQt6.QtCore import QTimer, Qt
-from PyQt6.QtGui import QFont, QColor
+from PyQt6.QtGui import QFont
 from PyQt6.QtSql import QSqlDatabase, QSqlQuery, QSqlTableModel
 
 from timer_ui import Ui_Form
@@ -174,7 +174,6 @@ def create_connection():
 
     # Пытаемся открыть подключение
     if not db.open():
-        # Если не получилось — сообщаем пользователю
         QMessageBox.critical(
             None,
             "Ошибка!",
@@ -208,6 +207,7 @@ class MyWidget(QMainWindow, Ui_Form):
         self.setupUi(self)
 
         self.model = QSqlTableModel(self)
+        self.setFixedSize(1017, 626)
         self.model.setTable("times")
         self.model.setSort(0, Qt.SortOrder.DescendingOrder)
         self.model.setEditStrategy(QSqlTableModel.EditStrategy.OnManualSubmit)
@@ -289,7 +289,6 @@ class MyWidget(QMainWindow, Ui_Form):
         self.is_dark_theme = False
 
         self.theme_button.clicked.connect(self.toggle_theme)
-        # Применяем тему при запуске
         self.apply_theme()
 
     def generation(self):
