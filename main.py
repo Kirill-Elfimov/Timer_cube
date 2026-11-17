@@ -214,12 +214,7 @@ class MyWidget(QMainWindow, Ui_Form):
         self.model.select()
 
 
-        # Твблица с прошлыми сборками
 
-        self.model.setTable("times")  # Указываем таблицу
-
-        # Устанавливаем красивые заголовки столбцов
-        # (потому что «id» и «completed» — не самые понятные названия)
         self.model.setHeaderData(0, Qt.Orientation.Horizontal, "ID")
         self.model.setHeaderData(1, Qt.Orientation.Horizontal, "Дисциплина")
         self.model.setHeaderData(2, Qt.Orientation.Horizontal, "Время (мс)")
