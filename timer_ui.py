@@ -61,7 +61,7 @@ class Ui_Form(object):
 
     def retranslateUi(self, Form):
         _translate = QtCore.QCoreApplication.translate
-        Form.setWindowTitle(_translate("Form", "Form"))
+        Form.setWindowTitle(_translate("Form", "CubeTimer"))
         self.regeneration.setText(_translate("Form", "Обновить"))
         self.timer_output.setText(_translate("Form", "TextLabel"))
         self.dnf_button.setText(_translate("Form", "DNF"))

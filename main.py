@@ -495,9 +495,7 @@ class MyWidget(QMainWindow, Ui_Form):
         self.sr_general()
         self.sr_best()
         self.change_in_statistics()
-        self.statusBar().showMessage(
-            "Штраф DNF применён" if new_penalty else "Штраф DNF снят", 3000
-        )
+        self.statusBar().showMessage("Штраф DNF применён" if new_penalty else "Штраф DNF снят", 3000)
         print("DNF")
 
     def sr_best(self):
@@ -544,7 +542,7 @@ class MyWidget(QMainWindow, Ui_Form):
                 self.ao5_l = None
                 return
 
-            totals = sorted(r["time_ms"] + r["penalty"] for r in rows)
+            totals = sorted(i["time_ms"] + i["penalty"] for i in rows)
             ao5_ms = sum(totals[1:-1]) / 3
             self.ao5_l = round(ao5_ms / 1000, 2)
             print(f"ao5 ({discipline}) = {self.ao5_l} с")
@@ -568,11 +566,10 @@ class MyWidget(QMainWindow, Ui_Form):
                 rows = con.execute(sql, params).fetchall()
 
             if len(rows) < 12:
-                print(f"Для ao12 нужно 12 сборок, есть {len(rows)}")
                 self.ao12_l = None
                 return
 
-            totals = sorted(r["time_ms"] + r["penalty"] for r in rows)
+            totals = sorted(i["time_ms"] + i["penalty"] for i in rows)
             ao12_ms = sum(totals[1:-1]) / 10
             self.ao12_l = round(ao12_ms / 1000, 2)
             print(f"ao12 ({discipline}) = {self.ao12_l} с")
@@ -597,11 +594,10 @@ class MyWidget(QMainWindow, Ui_Form):
                 rows = con.execute(sql, params).fetchall()
 
             if len(rows) < 100:
-                print(f"Для ao100 нужно 100 сборок, есть {len(rows)}")
                 self.ao100_l = None
                 return
 
-            totals = sorted(r["time_ms"] + r["penalty"] for r in rows)
+            totals = sorted(i["time_ms"] + i["penalty"] for i in rows)
             ao100_ms = sum(totals[5:-5]) / 90
             self.ao100_l = round(ao100_ms / 1000, 2)
             print(f"ao100 ({discipline}) = {self.ao100_l} с")
@@ -626,11 +622,10 @@ class MyWidget(QMainWindow, Ui_Form):
                 rows = con.execute(sql, params).fetchall()
 
             if len(rows) < 1000:
-                print(f"Для ao1000 нужно 1000 сборок, есть {len(rows)}")
                 self.ao1000_l = None
                 return
 
-            totals = sorted(r["time_ms"] + r["penalty"] for r in rows)
+            totals = sorted(i["time_ms"] + i["penalty"] for i in rows)
             ao1000_ms = sum(totals[50:-50]) / 900
             self.ao1000_l = round(ao1000_ms / 1000, 2)
             print(f"ao1000 ({discipline}) = {self.ao1000_l} с")
